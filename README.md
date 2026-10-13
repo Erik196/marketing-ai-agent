@@ -85,3 +85,19 @@ subagents, or dashboard. General marketing suggestions are not verified market
 research. We will collect actual tool execution events in Phase 2 and build the
 workflow visualizer in Phase 6.
 
+### Why the interface and agent logic are separate
+
+`cli.main()` reads terminal arguments and prints the answer in the terminal.
+The future Streamlit dashboard will read a web textbox and display the answer
+on a webpage. It should call `run_marketing_agent()` directly rather than call
+`cli.main()`, because terminal argument parsing does not belong in the dashboard.
+
+Both interfaces can reuse the same agent logic:
+
+```text
+Terminal → cli.py ───────┐
+                        ├→ run_marketing_agent() → SDK → LLM
+Web page → Streamlit ───┘
+```
+
+The Streamlit path is planned for Phase 6; only the terminal interface exists now.
