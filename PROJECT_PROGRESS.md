@@ -9,7 +9,7 @@ blocked validation step, record that limitation accurately in the checkpoint.
 
 ## Phase 1 — Setup and First Agent
 
-Status: implemented and locally validated; live API verification pending credentials.
+Status: complete; locally tested and live API response verified in the user's terminal.
 
 - Python 3.12 virtual environment created; project supports Python 3.11+.
 - Basic Python package, console entry point, and single-request CLI implemented.
@@ -26,11 +26,14 @@ Validation:
 - `python -m pytest -q`: 4 passed.
 - `python -m pip check`: no broken requirements.
 - CLI help runs successfully.
-- Live smoke-test command exits with code 2 and an actionable missing-key message;
-  no API request was made because OPENAI_API_KEY is not set.
+- Missing-key check in Codex's shell exits with code 2 and an actionable message.
+- User verified the live CLI in their own terminal with:
+  `python -m marketpilot "Write one headline for a student productivity app."`
+  It returned: "Boost Your Study Efficiency: Master More, Stress Less with [App Name]".
 
-Live API verification is pending: OPENAI_API_KEY was not available in the agent's
-shell at setup. No successful live response has been claimed.
+Live verification is based on the user's provided terminal output. The key is
+available in their terminal, but not inherited by Codex's shell. Project API
+authentication remains separate from Codex login.
 
 ## Remaining phases — not implemented
 
