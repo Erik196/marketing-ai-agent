@@ -1,0 +1,2 @@
+"""MarketPilot AI learning project."""
+
