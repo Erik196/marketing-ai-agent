@@ -9,6 +9,11 @@ from openai import APIConnectionError, APIStatusError, AuthenticationError, Rate
 from marketpilot.agent import run_marketing_agent
 
 
+"""
+Parses the arguments:
+after python -m you have the prompt and then an optional --model with the name of the model to override the default model.
+Then it runs the Agent harness function.
+"""
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="MarketPilot AI — Phase 1 marketing drafts")
     parser.add_argument("prompt", help="Marketing request in quotes")

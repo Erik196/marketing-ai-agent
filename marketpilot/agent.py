@@ -19,27 +19,29 @@ Distinguish general marketing suggestions from verified facts; never invent
 citations, statistics, product features, or customer testimonials.
 """
 
-
+"""
+Creates and returns our Agent
+"""
 def create_marketing_agent(model: str | None = None) -> Agent:
-    return Agent(
+    return Agent( # creates the agent
         name="MarketPilot AI",
         instructions=SYSTEM_INSTRUCTIONS,
         model=model or os.environ.get("MARKETPILOT_MODEL") or DEFAULT_MODEL,
     )
 
-
+"""
+Runs the whole harness
+"""
 async def run_marketing_agent(prompt: str, model: str | None = None) -> str:
-    if not prompt.strip():
+    if not prompt.strip(): # checks for empty prompt
         raise ValueError("Please provide a nonempty marketing request.")
-    if not os.environ.get("OPENAI_API_KEY", "").strip():
+    if not os.environ.get("OPENAI_API_KEY", "").strip(): # checks if api key is missing
         raise ValueError("OPENAI_API_KEY is not set. Set it in your local environment.")
-
-    # Runner owns the agent loop. There are no tool calls in Phase 1.
+    
     result = await Runner.run(
         create_marketing_agent(model),
         input=prompt.strip(),
         max_turns=3,
-        # Keep this initial exercise free of remote trace uploads.
         run_config=RunConfig(tracing_disabled=True),
     )
     return str(result.final_output)

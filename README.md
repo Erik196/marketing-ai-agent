@@ -1,8 +1,5 @@
 # MarketPilot AI
 
-A five-hour learning project, built one phase at a time. Phase 1 provides a
-single-request CLI marketing assistant using the OpenAI Agents SDK.
-
 ## Setup
 
 Use Python 3.11+ (this workspace uses Python 3.12).
@@ -21,9 +18,6 @@ read -rs 'OPENAI_API_KEY?OpenAI API key: '
 export OPENAI_API_KEY
 ```
 
-Do not paste your key into chat or commit it. The application reads the environment
-variable; it does not use your Codex login, and does not load `.env` files.
-API requests use your API account's credits. `.env` files are ignored by Git.
 
 ## Run
 
@@ -54,7 +48,25 @@ Unit tests use a mocked SDK runner and do not spend API credits. They do not
 prove live API connectivity. Run the marketing request above for a live smoke
 test after setting your key.
 
-## How Phase 1 works
+## Completed phases
+
+### Phase 1 — Setup and First Agent
+
+- Created a Python package and an isolated Python 3.12 virtual environment.
+- Installed and configured the OpenAI Agents SDK.
+- Defined the first Marketing Agent with marketing instructions and
+  `gpt-4.1-mini` as its default model.
+- Built a CLI that accepts a request and an optional model override, runs the
+  agent, and prints its response.
+- Configured API authentication through `OPENAI_API_KEY`.
+- Added input validation and clear messages for common API errors.
+- Added four offline tests; all passed, and the dependency check passed.
+- Verified a real API request in the local terminal: a request for a student
+  productivity app headline returned a generated headline.
+- Added `.gitignore`, project requirements, and progress documentation; committed
+  and pushed the Phase 1 checkpoint to GitHub.
+
+The request flow is:
 
 1. `marketpilot/cli.py` reads your request and optional model override.
 2. `marketpilot/agent.py` validates the request and checks that a key is present.
@@ -72,9 +84,4 @@ Phase 1 has no tools, live research, retrieval, CSV analysis, persistence, MCP,
 subagents, or dashboard. General marketing suggestions are not verified market
 research. We will collect actual tool execution events in Phase 2 and build the
 workflow visualizer in Phase 6.
-
-See [PROJECT_PROGRESS.md](PROJECT_PROGRESS.md) for validation and limitations and
-[REQUIREMENTS.md](REQUIREMENTS.md) for the visualizer requirements.
-
-Official pattern: [OpenAI Agents SDK quickstart](https://developers.openai.com/api/docs/guides/agents/quickstart).
 
