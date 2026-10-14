@@ -30,6 +30,12 @@ class WorkflowStore:
                     UNIQUE(run_id, sequence)
                 );
             """)
+            # Additive migration preserves runs created before Phase 5.
+            columns = {row[1] for row in db.execute("PRAGMA table_info(runs)")}
+            for column in ["configuration_json", "model_calls_json"]:
+                if column not in columns:
+                    db.execute(f"ALTER TABLE runs ADD COLUMN {column} TEXT")
+            db.commit()
 
     def _connect(self) -> sqlite3.Connection:
         db = sqlite3.connect(self.path, timeout=10)
@@ -43,14 +49,18 @@ class WorkflowStore:
         encode = lambda value: json.dumps(value) if value is not None else None
         with closing(self._connect()) as db, db:
             db.execute("""
-                INSERT INTO runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO runs (run_id, model, prompt, status, started_at, ended_at, duration_seconds,
+                                  final_output, final_report_json, error_json, configuration_json, model_calls_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(run_id) DO UPDATE SET status=excluded.status,
                     ended_at=excluded.ended_at, duration_seconds=excluded.duration_seconds,
                     final_output=excluded.final_output, final_report_json=excluded.final_report_json,
-                    error_json=excluded.error_json
+                    error_json=excluded.error_json, configuration_json=excluded.configuration_json,
+                    model_calls_json=excluded.model_calls_json
             """, (record["run_id"], record["model"], record["prompt"], record["status"],
                   record["started_at"], record["ended_at"], record["duration_seconds"],
-                  record["final_output"], encode(record.get("final_report")), encode(record["error"])))
+                  record["final_output"], encode(record.get("final_report")), encode(record["error"]),
+                  encode(record.get("configuration", {})), encode(record.get("model_calls", []))))
             for step in record["steps"]:
                 # Bound parameters keep data separate from SQL code.
                 db.execute("""
@@ -78,7 +88,7 @@ class WorkflowStore:
                 raise ValueError("Saved workflow run not found.")
             steps = db.execute("SELECT * FROM tool_steps WHERE run_id = ? ORDER BY sequence", (run_id,)).fetchall()
         result = dict(row)
-        for field in ["final_report", "error"]:
+        for field in ["final_report", "error", "configuration", "model_calls"]:
             value = result.pop(f"{field}_json")
             result[field] = json.loads(value) if value else None
         result["steps"] = []

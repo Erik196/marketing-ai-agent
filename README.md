@@ -14,8 +14,8 @@ results, and produces marketing drafts or answers grounded in retrieved evidence
 - Calculate campaign CSV metrics with pandas, produce structured campaign reports,
   and save workflow state and results in SQLite for later inspection.
 
-**Current scope:** phases 1–4 are implemented. Email and social content are draft-only.
-There is no automatic conversation memory, MCP, dashboard, or workflow
+**Current scope:** phases 1–5 are implemented. Email and social content are draft-only.
+There is no automatic conversation memory, dashboard, or workflow
 visualizer yet. The sample knowledge describes **StudySprint, a fictional demo
 product**. Research and retrieval results still need source review.
 
@@ -120,7 +120,7 @@ python -m pytest -q
 python -m pip check
 ```
 
-All 46 offline tests passed. Tests use mocked API/model responses and do not spend
+All 51 tests passed. Tests use mocked API/model responses and do not spend
 credits. Phase 1 has a verified live response; Phase 2 live tool calls and Phase 3
 live embeddings/RAG, and Phase 4 live agent workflows still need verification
 from an API-enabled terminal. Local analytics and SQLite persistence are verified.
@@ -316,7 +316,7 @@ includes its metadata so fictional examples remain distinguishable from real dat
 No Phase 3 changes are needed in `execution.py`, `cli.py`, or `__main__.py`: the
 existing tool logger and main runner already support another function tool.
 The existing tool-registration test was updated to expect the fifth tool.
-No files were deleted or dependencies added in Phase 3. Phases 5–7 remain unimplemented.
+No files were deleted or dependencies added in Phase 3. Phases 6–7 remain unimplemented.
 
 #### File flow
 
@@ -443,7 +443,7 @@ creates the store and enables the report schema only in campaign mode. `cli.py`
 adds the flag and handles SQLite errors. `pyproject.toml` adds pandas, and
 `requirements.txt` captures the installed dependency versions. `.gitignore`
 excludes user campaign data and SQLite sidecar files. Existing tests were adjusted
-to isolate storage in temporary directories. No files were deleted or committed.
+to isolate storage in temporary directories. No files were deleted.
 
 ```mermaid
 flowchart TD
@@ -474,3 +474,49 @@ flowchart TD
     Tests -.->|verify| Store
     Tests -.->|verify| SDK
 ```
+
+
+### Phase 5 — MCP and Agent Customization
+
+The application is the MCP **host**. `LoggedMCPServer` uses the Agents SDK's MCP
+**client** to start `mcp_server.py` as a separate process over **stdio**. The server
+exposes two real tools, a resource, and a prompt. The SDK discovers tool schemas
+and can execute model-selected MCP calls; results return through the usual loop.
+
+```sh
+# Real MCP subprocess, no LLM/API key needed: discover and exercise all primitives.
+python -m marketpilot.mcp_client
+
+# Live main model with a connected MCP server and selected Markdown procedure.
+python -m marketpilot --mcp --skill campaign-review --campaign "Use MCP to analyze sample_campaign.csv and recommend an improvement. Label the data fictional and explain your chosen metric."
+```
+
+`mcp_campaign_metrics` calculates CSV metrics, and `mcp_keyword_knowledge` searches
+local documents. `marketpilot://brand-guide` is an application-readable resource;
+`campaign_brief` is a user-selected prompt template. Resources/prompts are exercised
+by the inspection command, not automatically injected into agent conversations.
+Only `--mcp` runs connect the server. Its actual calls appear as `mcp.*` log steps.
+
+`rules/marketing.md` is always loaded into system instructions. `--skill campaign-review`
+adds `skills/campaign-review.md` explicitly. These are application conventions,
+not a native skill registry or enforceable security controls. There are no plugins
+or subagents. `RuntimeHooks` uses actual SDK lifecycle callbacks to record main-model
+call statuses, durations, and available token counts in JSON and SQLite; calls inside
+our drafting/research helpers are covered by tool duration, not these main-model hooks.
+
+Read: `mcp_server.py` → `mcp_client.py` → `customization.py` and its Markdown files
+→ `hooks.py` → the updated agent/CLI → `tests/test_phase5.py`.
+
+| File/functions | Purpose |
+| --- | --- |
+| `mcp_server.py`: tool/resource/prompt functions | Register protocol capabilities on a real server. |
+| `mcp_client.py`: `LoggedMCPServer`, `call_tool()` | Manage the subprocess and record actual MCP operations. |
+| `mcp_client.py`: `inspect_mcp()` | Discover tools/resources/prompts and exercise each without a model. |
+| `customization.py`: `load_custom_instructions()` | Load fixed rules and a whitelisted selected procedure. |
+| `hooks.py`: `on_llm_start()`, `on_llm_end()` | Observe main-model calls through real SDK hooks. |
+| `agent.py`, `cli.py` | Add `--mcp`/`--skill`, attach the server, and close it after the run. |
+| `execution.py`, `storage.py` | Persist configuration and model-call events; preserve earlier SQLite runs with an additive migration. |
+
+51 tests pass, including real subprocess discovery, native SDK MCP dispatch with
+an explicitly scripted model, failure recording, hooks, and SQLite migration.
+Live main-model MCP selection remains unverified until run from an API-enabled terminal.

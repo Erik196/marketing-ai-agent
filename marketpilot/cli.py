@@ -9,6 +9,7 @@ from openai import APIConnectionError, APIStatusError, AuthenticationError, Rate
 from agents import AgentsException
 
 from marketpilot.agent import run_marketing_agent
+from marketpilot.customization import SKILLS
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -18,12 +19,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", help="Override MARKETPILOT_MODEL and the default model")
     parser.add_argument("--quiet-tools", action="store_true", help="Hide status messages; still save execution logs")
     parser.add_argument("--campaign", action="store_true", help="Return a structured campaign report rendered as Markdown")
+    parser.add_argument("--mcp", action="store_true", help="Connect the local MCP server for this run")
+    parser.add_argument("--skill", choices=list(SKILLS), help="Load an application-level Markdown procedure")
     args = parser.parse_args(argv)
 
     try:
         # stderr keeps progress separate from the final answer on stdout.
         notify = None if args.quiet_tools else lambda message: print(message, file=sys.stderr, flush=True)
-        output = asyncio.run(run_marketing_agent(args.prompt, args.model, notify=notify, campaign=args.campaign))
+        output = asyncio.run(run_marketing_agent(args.prompt, args.model, notify=notify, campaign=args.campaign,
+                                                 use_mcp=args.mcp, skill=args.skill))
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2

@@ -114,8 +114,7 @@ Conversation memory, SQL retrieval, and a dashboard are still unimplemented.
 
 Status: implemented and offline validated. Deterministic sample analytics and
 SQLite persistence are verified; live LLM orchestration and report generation
-remain pending the user's API-enabled terminal. Keep all changes local until
-the user explicitly authorizes a commit/push.
+remain pending the user's API-enabled terminal. The user authorized sequential phase-end commits and pushes.
 
 - Added pandas CSV analysis with schema/value validation and aggregate/channel
   CTR, conversion rate, CPC, CPA, and optional ROAS. Null represents undefined metrics.
@@ -131,7 +130,7 @@ the user explicitly authorizes a commit/push.
 - Added workflow_cli analyze/list/show commands that require no API key.
 - Added pandas 3.0.6 to pyproject.toml and generated requirements.txt with pip
   freeze --exclude marketpilot-ai, omitting machine-specific editable paths.
-- No files deleted, no commits/pushes, and no Phase 5–7 functionality implemented.
+- Phase 4 committed and pushed as b53eb08 after explicit user authorization. No files deleted.
 
 Validation:
 - `python -m pytest -q`: 46 passed, including 18 Phase 4 cases.
@@ -152,9 +151,25 @@ establish causality or significance. Structured output validates shape, not fact
 JSON and SQLite writes are separate; forced termination may leave running state.
 No automatic resume, sessions, MCP, dashboard, or visualizer has been implemented.
 
+## Phase 5 — MCP and Agent Customization
+
+Status: implemented and tested; real MCP subprocess verified without an API key.
+Live LLM MCP selection remains pending an API-enabled terminal.
+
+- Real stdio MCP server exposes two tools, one Markdown resource, and one prompt.
+- Optional --mcp attaches the server natively through the Agents SDK and logs calls.
+- Fixed rules and explicitly selected --skill campaign-review load Markdown instructions.
+- These are application-level conventions; no native skill registry, plugins, or subagents claimed.
+- Real RunHooks callbacks record main-model call statuses, timing, and token counts.
+- SQLite migration retains older runs and adds configuration/model-call JSON fields.
+- mcp 2.3.0 declared explicitly; inspection CLI exercises all three protocol primitives.
+- 51 tests passed, including actual subprocess protocol calls and native SDK dispatch
+  with a scripted test model. Failure logging and legacy SQLite migration are tested.
+- Resources/prompts are not automatically attached to model context. Hooks do not
+  instrument the separate model requests inside drafting/research helper functions.
+
 ## Remaining phases — not implemented
 
-5. MCP and customization: real MCP demo, rules, skills, optional hooks/subagents.
 6. Dashboard: Streamlit and required architecture/execution visualizer; export if feasible.
 7. Testing and demo: end-to-end verification and presentation documentation.
 

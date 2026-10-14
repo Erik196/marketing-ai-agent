@@ -33,7 +33,8 @@ class ExecutionLog:
     """One JSON file per run; save each transition, not invented plan steps."""
 
     def __init__(self, prompt: str, model: str, notify: Callable[[str], None] | None = None,
-                directory: Path = LOG_DIRECTORY, store: "WorkflowStore | None" = None):
+                directory: Path = LOG_DIRECTORY, store: "WorkflowStore | None" = None,
+                configuration: dict | None = None):
         self.model = model
         self.notify = notify
         self.store = store
@@ -44,6 +45,7 @@ class ExecutionLog:
             "model": model, "prompt": prompt, "status": "running",
             "started_at": utc_now(), "ended_at": None,
             "duration_seconds": None, "steps": [], "final_output": None, "final_report": None, "error": None,
+            "configuration": configuration or {}, "model_calls": [],
         }
         self.save()
         self.emit(f"[Log] {self.path}")
@@ -88,6 +90,10 @@ class ExecutionLog:
 
     def finish(self, output: str | None = None, error: BaseException | None = None,
                report: dict | None = None) -> None:
+        if error is not None:
+            for call in self.record["model_calls"]:
+                if call["status"] == "running":
+                    call.update(status="failed", ended_at=utc_now())
         self.record.update(
             status="failed" if error else "completed", ended_at=utc_now(),
             duration_seconds=round(time.perf_counter() - self.started, 3), final_output=output,
