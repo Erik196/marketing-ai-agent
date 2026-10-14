@@ -31,7 +31,7 @@ def test_sdk_wiring_and_model_override(monkeypatch):
     called_agent = runner.call_args.args[0]
     assert called_agent.model == "chosen-model"
     assert [tool.name for tool in called_agent.tools] == [
-        "research_market", "generate_content", "create_social_posts", "draft_email",
+        "research_market", "generate_content", "create_social_posts", "draft_email", "search_knowledge",
     ]
     assert runner.call_args.kwargs["input"] == "Write a headline"
     assert runner.call_args.kwargs["run_config"].tracing_disabled

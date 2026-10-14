@@ -15,5 +15,7 @@ htmlcov/
 data/*.db
 data/*.sqlite*
 data/runs/
+data/knowledge_index.json
+data/knowledge_index.tmp
 .DS_Store
 

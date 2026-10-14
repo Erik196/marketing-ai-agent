@@ -8,6 +8,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from marketpilot.execution import ExecutionLog
+from marketpilot.retrieval import retrieve_knowledge
 
 
 class DraftItem(BaseModel):
@@ -149,4 +150,21 @@ async def draft_email(context: RunContextWrapper[ExecutionLog], brief: str,
     )
 
 
-MARKETING_TOOLS = [research_market, generate_content, create_social_posts, draft_email]
+@function_tool(failure_error_function=None)
+async def search_knowledge(context: RunContextWrapper[ExecutionLog], query: str,
+                           mode: Literal["keyword", "semantic", "hybrid"] = "hybrid",
+                           top_k: int = 3) -> dict:
+    """Retrieve product facts, brand guidance, or audience notes from the local Markdown knowledge base.
+
+    Args:
+        query: A focused question or search phrase about the local knowledge documents.
+        mode: Hybrid combines embeddings and keywords; semantic uses embeddings; keyword needs no index.
+        top_k: Maximum number of evidence passages to return, from 1 to 5.
+    """
+    return await context.context.execute(
+        "search_knowledge", {"query": query, "mode": mode, "top_k": top_k},
+        lambda: retrieve_knowledge(query, mode, top_k),
+    )
+
+
+MARKETING_TOOLS = [research_market, generate_content, create_social_posts, draft_email, search_knowledge]

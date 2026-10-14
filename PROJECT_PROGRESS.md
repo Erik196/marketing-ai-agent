@@ -2,8 +2,8 @@
 
 ## Git workflow
 
-After each phase, run the relevant checks, update this progress file, commit the
-phase's changes, and push to origin. Never include API keys, local environment
+After each phase, run the relevant checks and update this progress file. Commit
+and push only when the user explicitly requests it. Never include API keys, local environment
 files, virtual environments, or generated databases. If a phase still has a
 blocked validation step, record that limitation accurately in the checkpoint.
 
@@ -69,9 +69,49 @@ make additional paid API calls. Hosted search actions have no per-action timing;
 the research tool duration covers the whole API operation. Invalid SDK argument
 schemas fail the run before a Python tool step exists. Logs do not provide memory.
 
+## Phase 3 — Knowledge Base and RAG
+
+Status: implemented and offline validated; local keyword retrieval verified.
+Live embedding/index generation and a live model-generated RAG answer remain
+pending an API-enabled terminal. The user authorized the Phase 3 checkpoint
+with the commit message `phase 3 completed`.
+
+- Added three fictional StudySprint Markdown documents with title, tags, status,
+  and date metadata. This is a simple bundle-style demonstration, not a formal
+  OKF implementation or general-purpose YAML parser.
+- Added heading-aware chunks with source lines, metadata, stable IDs, and overlap
+  in long sections. The shipped corpus produces 9 chunks from 3 documents.
+- Added real text-embedding-3-small API requests and a cached local JSON vector
+  index. Unchanged indexes are reused; stale source fingerprints are rejected.
+- Added keyword, cosine-based semantic, and weighted hybrid retrieval. Returned
+  evidence includes citations and demo labels, without sending vectors to the LLM.
+- Added a knowledge CLI for explicit indexing and direct evidence inspection.
+- Added search_knowledge as the fifth logged agent tool, plus grounding/citation
+  instructions. The existing execution logger supports retrieval without changes.
+- No new dependencies, SQLite, MCP, subagents, dashboard, or later-phase code.
+
+Validation:
+- `python -m pytest -q`: 28 passed, including 14 new Phase 3 cases.
+- Real local keyword search found product.md's Supported features passage and
+  preserved its source line 11 and fictional_demo metadata.
+- An SDK integration test passed real local passages back to a scripted model;
+  this verifies tool plumbing, not a live model's behavior.
+- Tests cover metadata, chunk boundaries/overlap, no-match keyword queries,
+  embedding batch ordering, cache reuse, stale documents, invalid vectors,
+  semantic/hybrid ranking with explicit fixture vectors, and error messages.
+- `python -m pip check`: no broken requirements; knowledge CLI help works.
+- OPENAI_API_KEY is absent from Codex's shell. No real embedding index was built,
+  no mock vectors were saved as a production index, and no live RAG answer claimed.
+
+Limitations: JSON is a small local vector index, not a dedicated vector database.
+Character chunking can split words. Keyword scoring is simple word overlap, not
+BM25; hybrid weights are heuristic, not tuned. Rankings are not confidence scores
+and can return irrelevant passages. Demo audience notes are hypotheses, not research.
+Semantic/hybrid search needs an up-to-date index and paid query embeddings.
+Conversation memory, SQL retrieval, and a dashboard are still unimplemented.
+
 ## Remaining phases — not implemented
 
-3. Knowledge base and RAG: Markdown, chunking, embeddings, retrieval.
 4. Workflows and analytics: multi-step execution, pandas, SQLite state.
 5. MCP and customization: real MCP demo, rules, skills, optional hooks/subagents.
 6. Dashboard: Streamlit and required architecture/execution visualizer; export if feasible.
