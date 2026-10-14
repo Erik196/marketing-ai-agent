@@ -37,6 +37,25 @@ Each invocation is independent. The CLI prints Markdown text; it does not render
 a dashboard. Missing credentials, authentication errors, quota errors, and
 connection errors produce actionable messages and nonzero exit codes.
 
+To exercise the Phase 2 tools:
+
+```sh
+python -m marketpilot "Research two current competitors for a student productivity app, then create a 3-day Instagram calendar and draft a promotional email. Use placeholders for unknown product features and offers."
+```
+
+Tool progress appears on stderr, followed by the final answer on stdout:
+
+```text
+[Log] .../data/runs/<run-id>.json
+[Running] research_market
+[Completed] research_market — <measured duration>s
+```
+
+These are illustrative messages, not a claim that a live run has been verified.
+The log path points to the actual JSON record, which you can open in VS Code to
+inspect inputs, outputs, status, and timing. Use `--quiet-tools` to hide terminal
+progress while retaining the log. Logs stay local and are excluded from Git.
+
 ## Test
 
 ```sh
@@ -101,3 +120,68 @@ Web page → Streamlit ───┘
 ```
 
 The Streamlit path is planned for Phase 6; only the terminal interface exists now.
+
+### Phase 2 — Tools and Marketing Features
+
+- Added four real SDK function tools: `research_market`, `generate_content`,
+  `create_social_posts`, and `draft_email`.
+- Added live web research through OpenAI's hosted web search, requiring a
+  completed search and cited summary. API-provided citations and search actions
+  are preserved in the tool output.
+- Added focused drafting prompts and a Pydantic output schema. Content variants
+  are limited to 1–5 and social calendars to 1–7 days. All content stays draft-only.
+- Connected tools to the main agent so the model can choose calls and consume
+  their results; tool calls are configured to run sequentially.
+- Added terminal status messages and JSON execution records for the future visualizer.
+- Increased the main runner limit from 3 to 8 model turns and added SDK error handling.
+- Passed 14 offline tests, including the real SDK model → tool → model loop with
+  an explicitly scripted test model. Live Phase 2 API verification remains pending.
+
+#### How a tool request works
+
+1. The main LLM sees your request, instructions, and tool schemas.
+2. It chooses a tool and produces JSON arguments. `@function_tool` derives the
+   tool schema from the Python signature and docstring; the SDK validates arguments.
+3. The SDK invokes the Python function. Its local context contains the run log
+   and model name; the LLM does not supply this context.
+4. Python records the running state and calls the relevant API operation.
+5. Python records the result or failure and measured duration.
+6. The SDK sends the tool result back to the main LLM, which can request another
+   tool or compose a final answer. The runner stops when it receives a final answer.
+
+The drafting tools use focused model calls to produce reusable structured drafts.
+They are not separate agents or handoffs. Each drafting tool adds an API request;
+web research also uses hosted search and its associated API charges. Research
+is a web-sourced synthesis, not a guarantee that every claim is correct.
+The 8-turn limit counts calls made by the main agent's runner; the focused API
+calls inside tools are separate and do not count toward that limit.
+
+#### Phase 2 code guide
+
+| File | Functions or classes | Purpose |
+| --- | --- | --- |
+| `marketpilot/tools.py` | `DraftItem`, `DraftOutput` | Define the structured draft fields: title, labeled text items, and assumptions. |
+| `marketpilot/tools.py` | `generate_draft()` | Call the Responses API with a focused prompt, parse the schema, and validate the item count. |
+| `marketpilot/tools.py` | `search_market()` | Require hosted search and return its summary, citations, and search actions. |
+| `marketpilot/tools.py` | `research_market()` | Expose and log the research operation as a function tool. |
+| `marketpilot/tools.py` | `generate_content()` | Validate the variant count and draft ads, headlines, or blog outlines. |
+| `marketpilot/tools.py` | `create_social_posts()` | Validate the calendar length and draft one post per day for a platform. |
+| `marketpilot/tools.py` | `draft_email()` | Draft subject, preview text, body, and call to action. |
+| `marketpilot/execution.py` | `utc_now()`, `redact()` | Produce UTC timestamps and mask API keys in saved text. |
+| `marketpilot/execution.py` | `ExecutionLog.__init__()` | Create a unique run record and save its initial state. |
+| `marketpilot/execution.py` | `emit()`, `save()` | Send progress to the interface and atomically save JSON. |
+| `marketpilot/execution.py` | `execute()` | Wrap an actual tool operation with running/completed/failed events and timing. |
+| `marketpilot/execution.py` | `finish()` | Save the final response or run failure and total duration. |
+| `marketpilot/agent.py` | `create_marketing_agent()`, `run_marketing_agent()` | Attach tools, supply local context, and finalize the execution log. |
+| `marketpilot/cli.py` | `main()` | Print progress to stderr, support `--quiet-tools`, and handle SDK/logging errors. |
+
+The small inner `operation()` functions in content and social tools keep validation
+inside the logged operation, so invalid limits are recorded as failed steps.
+The lambdas defer API execution until `execute()` has saved the running event.
+
+Run records contain a run ID, model, prompt, final output, overall status and timing,
+and an ordered list of tool steps. Each step contains its own ID, tool name, inputs,
+outputs, status, timestamps, duration, and error if one occurred. Ordering reflects
+when operations start. Only operations entered in Python become tool steps; SDK
+argument-validation failures are recorded as run failures. Hosted search actions
+are preserved within research output; their individual durations are unavailable.

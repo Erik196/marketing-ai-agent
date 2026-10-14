@@ -24,12 +24,15 @@ def test_empty_request_prevents_api_call():
 def test_sdk_wiring_and_model_override(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder")
     monkeypatch.setenv("MARKETPILOT_MODEL", "environment-model")
+    monkeypatch.setattr(agent, "ExecutionLog", lambda *args: SimpleNamespace(finish=lambda **kwargs: None))
     runner = AsyncMock(return_value=SimpleNamespace(final_output="Draft campaign"))
     monkeypatch.setattr(agent.Runner, "run", runner)
     assert asyncio.run(agent.run_marketing_agent("  Write a headline  ", "chosen-model")) == "Draft campaign"
     called_agent = runner.call_args.args[0]
     assert called_agent.model == "chosen-model"
-    assert called_agent.tools == []
+    assert [tool.name for tool in called_agent.tools] == [
+        "research_market", "generate_content", "create_social_posts", "draft_email",
+    ]
     assert runner.call_args.kwargs["input"] == "Write a headline"
     assert runner.call_args.kwargs["run_config"].tracing_disabled
 
