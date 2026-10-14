@@ -1,0 +1,133 @@
+# Explaining MarketPilot AI in an AI-agent interview
+
+## Your 60-second introduction
+
+“I built a Python marketing agent with the OpenAI Agents SDK. The main model
+chooses tools, the runtime executes Python or MCP calls, and the results return
+to the model before it answers. Tools cover web research, structured marketing
+drafts, local knowledge retrieval, and deterministic CSV analytics. I use Markdown
+chunks and embeddings for hybrid RAG, SQLite for workflow state, and SDK hooks
+plus tool wrappers for execution records. Streamlit shows the architecture and
+actual recorded steps. Publishing stays draft-only, and I label fictional data
+and test simulations explicitly.”
+
+If asked about AI coding assistance, be direct: Codex helped implement the code;
+your responsibility is understanding its behavior, verifying it, and explaining
+the decisions and limitations. Do not claim implementation details you cannot trace.
+
+## Demonstrate it in five minutes
+
+1. Start `python -m streamlit run app.py` from the terminal with your API key.
+2. Open the architecture view: explain request → SDK agent → model → tools → result.
+3. Run this live request in Workspace with structured report enabled:
+   “Use StudySprint knowledge in keyword mode, analyze sample_campaign.csv, and
+   draft an improved email. Cite sources and label all demo data fictional.”
+4. Show Execution view. Inspect retrieval evidence, then the calculated analytics,
+   then the email draft. Explain that these steps came from recorded operations,
+   not a diagram inferred from the final answer.
+5. Show a saved report and explain SQLite state versus conversation memory.
+6. Optionally enable MCP and request MCP analytics. Point out the separate stdio
+   server process and the recorded `mcp.*` step.
+
+Without an API key, use “Run local demo — no LLM.” It performs actual retrieval,
+analytics, and MCP calls. Say explicitly that this demonstrates tools and
+observability, not autonomous model planning or generated marketing content.
+Do not present a scripted test model as a live model demonstration.
+
+## Trace one request through the code
+
+```text
+app.py (or cli.py)
+  → agent.py · run_marketing_agent()
+      → create_marketing_agent(): instructions, tools, optional report schema
+      → ExecutionLog + WorkflowStore: initial running record
+      → optional LoggedMCPServer: start/connect server
+      → Runner.run(): bounded model/tool loop
+          → model chooses tool name + JSON arguments
+          → SDK validates and invokes the tool
+          → tools.py · search_knowledge()
+              → execution.py · execute(): save running
+              → retrieval.py · retrieve_knowledge(): return passages
+              → execute(): save completed/output/timing
+          → SDK adds function_call_output with matching call ID to history
+          → next model call consumes that evidence
+          → analytics/drafting tools when requested
+      → CampaignReport parsed in --campaign mode
+      → to_markdown(), log.finish(), SQLite final snapshot
+  → display report and diagrams
+```
+
+`context=log` is local Python state. It does not put the logger in the model's
+prompt. The model sees tool results because the SDK adds them to conversation
+history. Separate drafting API calls receive their focused instructions and brief;
+they do not automatically share the main model's history.
+
+## Decisions you should be able to defend
+
+| Decision | Reason and limitation |
+| --- | --- |
+| One main agent | Simple orchestration; separate drafting calls are not subagents. |
+| Function tools | Typed schemas expose capabilities while Python performs the work. |
+| Eight main-model turns | Bounds the runner; helper API calls and retries are separate. Stops earlier on a final answer. |
+| Sequential calls | Easier evidence dependencies and understandable execution records. |
+| Python/pandas metrics | Deterministic arithmetic instead of relying on generated numbers. Aggregate before calculating rates. |
+| Markdown + local vectors | Easy to inspect and small enough for a local index. Not a dedicated vector database. |
+| Hybrid retrieval | Combines exact words and related meaning. Weights are heuristic; ranks are not confidence. |
+| Cached embeddings | Reuse document vectors; re-embed queries and reject stale source indexes. No model training happens. |
+| SQLite + JSON | Queryable persistent state plus readable logs. Separate writes; not an automatic resume system. |
+| Structured final report | Validates shape, not truth. Check original evidence and recorded tool calls. |
+| MCP | Standard protocol for a separate server's capabilities, rather than a Python-only import. |
+| Rules/skills | Explicit Markdown instructions. They are application conventions, not a native plugin/skill registry. |
+| Hooks | Actual SDK callbacks observe main-model calls; Python wrappers observe tool operations. |
+| Graphviz visualizer | Clear, inspectable diagrams using stored events. No invented execution steps or advanced frontend machinery. |
+
+## Read the code in this order
+
+1. `agent.py` and `cli.py`: understand the main entry point and loop configuration.
+2. One tool in `tools.py`, then `execution.py`: follow its execution and result.
+3. `retrieval.py`: loading/chunking → indexing → keyword/semantic/hybrid retrieval.
+4. `analytics.py`: validate input → aggregate → calculate metrics.
+5. `storage.py` and `reports.py`: persisted state and final output shape.
+6. `mcp_server.py`, `mcp_client.py`: host/client/server and protocol primitives.
+7. `customization.py`, rules/skills Markdown, `hooks.py`: customization and observation.
+8. `app.py`, `visualizer.py`: UI and diagrams reuse the existing core.
+9. Tests: identify what is real, what is mocked, and what each test proves.
+
+You need to explain responsibility, data flow, and failure behavior. You do not
+need to memorize every regex, SQL statement, or helper implementation.
+
+## Practice questions and answer checkpoints
+
+1. **What makes this an agent rather than a single LLM request?** The model can
+   choose tools, observe their results, and choose another action before answering.
+2. **Who executes the tools?** The SDK invokes our Python functions or its MCP
+   client; the model requests actions but does not execute Python itself.
+3. **How do results reach the model?** The runtime adds tool-result messages with
+   call IDs to history, then makes the next model request.
+4. **What if retrieval finds nothing useful?** A rank does not establish relevance;
+   acknowledge missing evidence rather than fabricate facts.
+5. **What happens after editing Markdown?** Keyword search reads current files;
+   semantic/hybrid search rejects a stale index until indexing is rerun.
+6. **What if conversions are zero?** CPA is unavailable (`null`), not zero. No
+   causal or statistical claim follows from a small observational dataset.
+7. **How are MCP tools different from resources/prompts?** Tools are actions the
+   model can request; resources are host-loaded data; prompts are user-selected templates.
+8. **Are previous reports automatically remembered?** No. A run ID explicitly
+   retrieves a saved report; new invocations do not inherit conversation history.
+9. **How do you prove a tool ran?** Inspect its logged inputs, outputs, status,
+   timing, and saved record; do not rely on the model's narrative alone.
+10. **What do offline tests prove?** Python logic and real SDK/protocol plumbing
+    under controlled responses. They do not prove live API access or model quality.
+11. **What happens when the loop exceeds eight turns?** The SDK raises a limit
+    error; the run is recorded as failed. It does not force exactly eight calls.
+12. **What has not been built?** Automatic conversation memory/resume, subagents,
+    plugin packaging, real publishing, comprehensive evaluations, and production deployment.
+
+## How to know you are ready
+
+Explain the project once without notes, demonstrate a workflow, and trace one tool
+result back to the next model call. Then predict three failures: missing API key,
+stale index, and invalid CSV. Verify your predictions with the CLI or tests.
+If you can explain the boundaries and show the evidence, you can discuss this
+project credibly. Knowing every line is not required, and no guide guarantees
+perfect interview performance.

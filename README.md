@@ -13,10 +13,13 @@ results, and produces marketing drafts or answers grounded in retrieved evidence
   and inspectable JSON execution logs.
 - Calculate campaign CSV metrics with pandas, produce structured campaign reports,
   and save workflow state and results in SQLite for later inspection.
+- Connect a real local MCP server and inspect tools, resources, and prompts.
+- Present architecture and actual execution diagrams in a Streamlit dashboard,
+  inspect individual steps, and export diagrams and reports.
 
-**Current scope:** phases 1–5 are implemented. Email and social content are draft-only.
-There is no automatic conversation memory, dashboard, or workflow
-visualizer yet. The sample knowledge describes **StudySprint, a fictional demo
+**Current scope:** phases 1–6 are implemented. Email and social content are draft-only.
+There is no automatic conversation memory, automatic resume, subagents, or plugin
+packaging. The sample knowledge describes **StudySprint, a fictional demo
 product**. Research and retrieval results still need source review.
 
 ## Setup
@@ -49,6 +52,20 @@ To refresh that snapshot after installing dependencies, use
 The exclusion avoids recording a machine-specific editable project path.
 
 ## Run and example prompts
+
+Start the dashboard from the shell where your API key is set:
+
+```sh
+python -m streamlit run app.py
+```
+
+Open the displayed localhost URL. Workspace runs the same agent as the CLI;
+Workflow visualizer shows architecture and recorded execution. Presentation mode
+hides settings for screen sharing. Without a key, use **Run local demo — no LLM**:
+it executes real retrieval, analytics, and MCP operations, without autonomous
+planning or generated content. It is explicitly labeled throughout.
+
+For an interview walkthrough, see [docs/INTERVIEW_GUIDE.md](docs/INTERVIEW_GUIDE.md).
 
 Put any request in quotes:
 
@@ -120,7 +137,7 @@ python -m pytest -q
 python -m pip check
 ```
 
-All 51 tests passed. Tests use mocked API/model responses and do not spend
+All 57 tests passed. Tests use mocked API/model responses and do not spend
 credits. Phase 1 has a verified live response; Phase 2 live tool calls and Phase 3
 live embeddings/RAG, and Phase 4 live agent workflows still need verification
 from an API-enabled terminal. Local analytics and SQLite persistence are verified.
@@ -316,7 +333,7 @@ includes its metadata so fictional examples remain distinguishable from real dat
 No Phase 3 changes are needed in `execution.py`, `cli.py`, or `__main__.py`: the
 existing tool logger and main runner already support another function tool.
 The existing tool-registration test was updated to expect the fifth tool.
-No files were deleted or dependencies added in Phase 3. Phases 6–7 remain unimplemented.
+No files were deleted or dependencies added in Phase 3. Phase 7 remains unimplemented.
 
 #### File flow
 
@@ -520,3 +537,50 @@ Read: `mcp_server.py` → `mcp_client.py` → `customization.py` and its Markdow
 51 tests pass, including real subprocess discovery, native SDK MCP dispatch with
 an explicitly scripted model, failure recording, hooks, and SQLite migration.
 Live main-model MCP selection remains unverified until run from an API-enabled terminal.
+
+
+### Phase 6 — Dashboard and Agent Workflow Visualizer
+
+`app.py` is a Streamlit interface that reuses existing agent, retrieval, analytics,
+MCP, and storage code. It does not implement a second agent loop. Workspace accepts
+requests and validates CSV uploads; Knowledge inspects passages and builds embeddings;
+MCP exercises real protocol primitives. The Learn view links the interview guide.
+
+The visualizer has two modes:
+
+- **Architecture:** implemented connections between request, agent/SDK, model,
+  tools, RAG, analytics, MCP, execution records, and output. Optional/inactive
+  components are dashed, including unimplemented subagents/plugins. The local
+  demo explicitly bypasses the model and agent-planning path.
+- **Execution:** draws only stored tool operations in recorded start order, with
+  running/completed/failed status and available duration. Select a step to inspect
+  inputs, outputs, errors, and timestamps; inspect main-model hooks separately.
+
+Presentation mode hides settings and enlarges diagram labels. DOT diagram export
+is always available; SVG export is conditional on an installed native Graphviz
+`dot` executable. Browser rendering uses Streamlit's Graphviz support and does not
+need that executable. Reports download as Markdown and execution records as JSON.
+
+Read: `app.py` → `visualizer.py` → `demo.py` → `dashboard_helpers.py` →
+`tests/test_phase6.py` → the interview guide. The agent adds an optional
+`on_run_created` callback so the UI knows which run to display; hooks emit model
+progress through the same optional notification callback. The core CLI still works.
+
+| File/functions | Purpose |
+| --- | --- |
+| `app.py` | UI controls, workflow execution, run selection, step inspection, and downloads. |
+| `visualizer.py`: `new_diagram()` | Shared professional Graphviz styling. |
+| `architecture_diagram()` | Build implemented connections with per-run activation labels. |
+| `execution_diagram()` | Draw recorded operations only; never invent workflow steps. |
+| `demo.py`: `run_local_demo()` | Execute real local retrieval/analytics/MCP without claiming LLM planning. |
+| `dashboard_helpers.py`: `save_campaign_upload()` | Validate a CSV before saving it under a content-derived filename. |
+| `.streamlit/config.toml` | Consistent light theme and disabled Streamlit usage statistics. |
+| `docs/INTERVIEW_GUIDE.md` | Pitch, demo script, file trace, tradeoffs, and practice questions. |
+
+57 tests pass. Streamlit AppTest verifies the no-key UI, real keyword inspection,
+local demo, diagram controls, step selection, presentation mode, and real MCP
+inspection. The server starts and its localhost health endpoint responds. A real
+browser paint and live OpenAI workflow still require a user-side check. Local
+sample data is fictional; no simulated model events are presented as live execution.
+
+Phase 7's final live end-to-end checks and demo review remain to be completed.

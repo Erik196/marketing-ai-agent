@@ -73,7 +73,8 @@ def create_marketing_agent(model: str | None = None, campaign: bool = False, ski
 
 async def run_marketing_agent(prompt: str, model: str | None = None,
                               notify: Callable[[str], None] | None = None, campaign: bool = False,
-                              use_mcp: bool = False, skill: str | None = None) -> str:
+                              use_mcp: bool = False, skill: str | None = None,
+                              on_run_created: Callable[[str], None] | None = None) -> str:
     """Validate input, run the SDK harness, and persist actual execution events."""
     if not prompt.strip(): # checks for empty prompt
         raise ValueError("Please provide a nonempty marketing request.")
@@ -85,6 +86,8 @@ async def run_marketing_agent(prompt: str, model: str | None = None,
                        configuration={"campaign": campaign, "skill": skill, "mcp_requested": use_mcp,
                                       "mcp_enabled": False, "function_tools": [tool.name for tool in MARKETING_TOOLS]})
     try:
+        if on_run_created:
+            on_run_created(log.path.stem)
         # Enter and close the MCP subprocess on the same async task as the agent run.
         async with AsyncExitStack() as stack:
             if use_mcp:

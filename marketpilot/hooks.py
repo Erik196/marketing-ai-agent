@@ -18,6 +18,7 @@ class RuntimeHooks(RunHooks):
                       "started_at": utc_now(), "ended_at": None, "duration_seconds": None,
                       "input_tokens": None, "output_tokens": None})
         context.context.save()
+        context.context.emit(f"[Model] Call {len(calls)} running")
 
     async def on_llm_end(self, context, agent, response):
         call = context.context.record["model_calls"][-1]
@@ -25,3 +26,4 @@ class RuntimeHooks(RunHooks):
                     duration_seconds=round(time.perf_counter() - self.started, 3),
                     input_tokens=response.usage.input_tokens, output_tokens=response.usage.output_tokens)
         context.context.save()
+        context.context.emit(f"[Model] Call {call['sequence']} completed — {call['duration_seconds']:.3f}s")
