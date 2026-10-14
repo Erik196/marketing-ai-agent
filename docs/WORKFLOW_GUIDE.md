@@ -1,38 +1,18 @@
-# Explaining MarketPilot AI in an AI-agent interview
+# MarketPilot workflow guide
 
-## Your 60-second introduction
+Technical notes for inspecting the local application, tracing tool results, and
+understanding implementation decisions.
 
-“I built a Python marketing agent with the OpenAI Agents SDK. The main model
-chooses tools, the runtime executes Python or MCP calls, and the results return
-to the model before it answers. Tools cover web research, structured marketing
-drafts, local knowledge retrieval, and deterministic CSV analytics. I use Markdown
-chunks and embeddings for hybrid RAG, SQLite for workflow state, and SDK hooks
-plus tool wrappers for execution records. Streamlit shows the architecture and
-actual recorded steps. Publishing stays draft-only, and I label fictional data
-and test simulations explicitly.”
-
-If asked about AI coding assistance, be direct: Codex helped implement the code;
-your responsibility is understanding its behavior, verifying it, and explaining
-the decisions and limitations. Do not claim implementation details you cannot trace.
-
-## Demonstrate it in five minutes
+## Inspect a local workflow
 
 1. Start `python -m streamlit run app.py` from the terminal with your API key.
-2. Open the architecture view: explain request → SDK agent → model → tools → result.
-3. Run this live request in Workspace with structured report enabled:
-   “Use StudySprint knowledge in keyword mode, analyze sample_campaign.csv, and
-   draft an improved email. Cite sources and label all demo data fictional.”
-4. Show Execution view. Inspect retrieval evidence, then the calculated analytics,
-   then the email draft. Explain that these steps came from recorded operations,
-   not a diagram inferred from the final answer.
-5. Show a saved report and explain SQLite state versus conversation memory.
-6. Optionally enable MCP and request MCP analytics. Point out the separate stdio
-   server process and the recorded `mcp.*` step.
+2. Run a request using local knowledge, sample CSV analytics, and an email draft.
+3. Open Execution view to inspect the recorded inputs, outputs, status, and duration.
+4. Check the saved report and compare its claims with the original tool results.
+5. Enable MCP when needed and inspect the separate server's recorded operations.
 
-Without an API key, use “Run local demo — no LLM.” It performs actual retrieval,
-analytics, and MCP calls. Say explicitly that this demonstrates tools and
-observability, not autonomous model planning or generated marketing content.
-Do not present a scripted test model as a live model demonstration.
+Without an API key, “Run local demo — no LLM” executes actual retrieval, analytics,
+and MCP calls. It does not perform autonomous model planning or generate content.
 
 ## Trace one request through the code
 
@@ -62,7 +42,7 @@ prompt. The model sees tool results because the SDK adds them to conversation
 history. Separate drafting API calls receive their focused instructions and brief;
 they do not automatically share the main model's history.
 
-## Decisions you should be able to defend
+## Architecture decisions and limitations
 
 | Decision | Reason and limitation |
 | --- | --- |
@@ -96,7 +76,7 @@ they do not automatically share the main model's history.
 You need to explain responsibility, data flow, and failure behavior. You do not
 need to memorize every regex, SQL statement, or helper implementation.
 
-## Practice questions and answer checkpoints
+## Implementation FAQ
 
 1. **What makes this an agent rather than a single LLM request?** The model can
    choose tools, observe their results, and choose another action before answering.
@@ -123,11 +103,7 @@ need to memorize every regex, SQL statement, or helper implementation.
 12. **What has not been built?** Automatic conversation memory/resume, subagents,
     plugin packaging, real publishing, comprehensive evaluations, and production deployment.
 
-## How to know you are ready
+## Local checks
 
-Explain the project once without notes, demonstrate a workflow, and trace one tool
-result back to the next model call. Then predict three failures: missing API key,
-stale index, and invalid CSV. Verify your predictions with the CLI or tests.
-If you can explain the boundaries and show the evidence, you can discuss this
-project credibly. Knowing every line is not required, and no guide guarantees
-perfect interview performance.
+Trace a tool result back to the next model call. Check how a missing API key,
+stale index, or invalid CSV is handled using the CLI and tests.

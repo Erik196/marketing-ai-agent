@@ -179,21 +179,18 @@ API-enabled terminal; actual browser appearance awaits user review.
   components. A selected local demo clearly bypasses LLM planning.
 - Execution diagram uses actual stored tool steps with statuses/durations and an
   input/output/error inspector. Model-call hook records can be inspected separately.
-- Presentation mode, DOT export, conditional SVG export, Markdown report export,
+- Focus mode, DOT export, conditional SVG export, Markdown report export,
   and JSON record export implemented. Native dot is not installed in this environment.
 - CSV upload validates before persistence and uses a content-derived local filename.
 - Explicit no-key demo executes actual retrieval, pandas, and real MCP operations;
-  it makes no model calls and is not presented as autonomous agent planning.
+  it makes no model calls and is not labeled as autonomous agent planning.
 - Added Streamlit 1.65.0, graphviz 0.21, theme config, and refreshed requirements.txt.
-- Added an AI-agent interview guide with pitch, demo script, file map, and answer checkpoints.
+- Added a workflow reference with execution flow, file map, and implementation notes.
 - 57 tests passed, including Streamlit AppTest for no-key state, knowledge search,
-  real local demo, execution inspection, presentation mode, and real MCP inspection.
+  real local demo, execution inspection, focus mode, and real MCP inspection.
 - Local Streamlit server starts; /_stcore/health responds ok. Browser screenshot
   testing and live OpenAI calls are not claimed as verified.
 
 ## Remaining phases — not implemented
 
-7. Testing and demo: end-to-end verification and presentation documentation.
-
-The original phase budget totals 300 minutes. Keep optional additions small and
-protect the required visualizer. Do not begin a new phase without user instruction.
+7. Final verification: end-to-end testing and technical documentation.

@@ -80,7 +80,7 @@ def test_dashboard_no_key_and_real_keyword_inspection(app):
     assert any("knowledge/product.md" in str(element.value) for element in app.json)
 
 
-def test_dashboard_local_demo_execution_inspection_and_presentation(app):
+def test_dashboard_local_demo_execution_inspection_and_focus_mode(app):
     app.button(key="local_demo").click().run()
     assert not app.exception
     assert app.session_state["selected_run"]

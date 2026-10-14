@@ -14,7 +14,7 @@ results, and produces marketing drafts or answers grounded in retrieved evidence
 - Calculate campaign CSV metrics with pandas, produce structured campaign reports,
   and save workflow state and results in SQLite for later inspection.
 - Connect a real local MCP server and inspect tools, resources, and prompts.
-- Present architecture and actual execution diagrams in a Streamlit dashboard,
+- Inspect architecture and actual execution diagrams in a Streamlit dashboard,
   inspect individual steps, and export diagrams and reports.
 
 **Current scope:** phases 1–6 are implemented. Email and social content are draft-only.
@@ -60,12 +60,12 @@ python -m streamlit run app.py
 ```
 
 Open the displayed localhost URL. Workspace runs the same agent as the CLI;
-Workflow visualizer shows architecture and recorded execution. Presentation mode
-hides settings for screen sharing. Without a key, use **Run local demo — no LLM**:
+Workflow visualizer shows architecture and recorded execution. Focus mode
+hides settings for a larger workflow inspection area. Without a key, use **Run local demo — no LLM**:
 it executes real retrieval, analytics, and MCP operations, without autonomous
 planning or generated content. It is explicitly labeled throughout.
 
-For an interview walkthrough, see [docs/INTERVIEW_GUIDE.md](docs/INTERVIEW_GUIDE.md).
+For implementation details, see [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md).
 
 Put any request in quotes:
 
@@ -544,7 +544,7 @@ Live main-model MCP selection remains unverified until run from an API-enabled t
 `app.py` is a Streamlit interface that reuses existing agent, retrieval, analytics,
 MCP, and storage code. It does not implement a second agent loop. Workspace accepts
 requests and validates CSV uploads; Knowledge inspects passages and builds embeddings;
-MCP exercises real protocol primitives. The Learn view links the interview guide.
+MCP exercises real protocol primitives. The Learn view links the workflow guide.
 
 The visualizer has two modes:
 
@@ -556,13 +556,13 @@ The visualizer has two modes:
   running/completed/failed status and available duration. Select a step to inspect
   inputs, outputs, errors, and timestamps; inspect main-model hooks separately.
 
-Presentation mode hides settings and enlarges diagram labels. DOT diagram export
+Focus mode hides settings and enlarges diagram labels. DOT diagram export
 is always available; SVG export is conditional on an installed native Graphviz
 `dot` executable. Browser rendering uses Streamlit's Graphviz support and does not
 need that executable. Reports download as Markdown and execution records as JSON.
 
 Read: `app.py` → `visualizer.py` → `demo.py` → `dashboard_helpers.py` →
-`tests/test_phase6.py` → the interview guide. The agent adds an optional
+`tests/test_phase6.py` → the workflow guide. The agent adds an optional
 `on_run_created` callback so the UI knows which run to display; hooks emit model
 progress through the same optional notification callback. The core CLI still works.
 
@@ -575,12 +575,12 @@ progress through the same optional notification callback. The core CLI still wor
 | `demo.py`: `run_local_demo()` | Execute real local retrieval/analytics/MCP without claiming LLM planning. |
 | `dashboard_helpers.py`: `save_campaign_upload()` | Validate a CSV before saving it under a content-derived filename. |
 | `.streamlit/config.toml` | Consistent light theme and disabled Streamlit usage statistics. |
-| `docs/INTERVIEW_GUIDE.md` | Pitch, demo script, file trace, tradeoffs, and practice questions. |
+| `docs/WORKFLOW_GUIDE.md` | Execution flow, file trace, and implementation decisions. |
 
 57 tests pass. Streamlit AppTest verifies the no-key UI, real keyword inspection,
-local demo, diagram controls, step selection, presentation mode, and real MCP
+local demo, diagram controls, step selection, focus mode, and real MCP
 inspection. The server starts and its localhost health endpoint responds. A real
 browser paint and live OpenAI workflow still require a user-side check. Local
-sample data is fictional; no simulated model events are presented as live execution.
+sample data is fictional; no simulated model events are labeled as live execution.
 
-Phase 7's final live end-to-end checks and demo review remain to be completed.
+Phase 7's final live end-to-end checks remain to be completed.

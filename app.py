@@ -24,8 +24,8 @@ st.title("MarketPilot AI")
 st.caption("Marketing drafts · grounded knowledge · measurable execution")
 store = WorkflowStore()
 has_key = bool(os.environ.get("OPENAI_API_KEY", "").strip())
-presentation = st.toggle("Presentation mode", key="presentation")
-if presentation:
+focus_mode = st.toggle("Focus mode", key="focus_mode")
+if focus_mode:
     st.markdown("<style>[data-testid='stSidebar']{display:none}</style>", unsafe_allow_html=True)
 
 with st.sidebar:
@@ -37,7 +37,7 @@ with st.sidebar:
     st.caption("API key available" if has_key else "No API key in this process. Local tools and the local demo still work.")
     st.caption("All emails and social content remain drafts. Sample knowledge and campaign data are fictional.")
 
-view = "Workflow visualizer" if presentation else st.radio(
+view = "Workflow visualizer" if focus_mode else st.radio(
     "View", ["Workspace", "Workflow visualizer", "Knowledge", "MCP", "Learn"], horizontal=True)
 
 
@@ -146,10 +146,10 @@ elif view == "Workflow visualizer":
         st.rerun()
     mode = st.radio("Diagram mode", ["Architecture", "Execution"], horizontal=True)
     if mode == "Architecture":
-        show_diagram(architecture_diagram(selected, presentation), "architecture")
+        show_diagram(architecture_diagram(selected, focus_mode), "architecture")
         st.caption("Solid components are implemented and active in the selected path; dashed components are inactive or explicitly optional. Dotted arrows identify separate API requests or saved-result inspection.")
     elif selected:
-        show_diagram(execution_diagram(selected, presentation), "execution")
+        show_diagram(execution_diagram(selected, focus_mode), "execution")
         st.caption("Arrows show recorded operation start order. No steps are inferred from the prompt. Blue = running; green = completed; red = failed.")
     else:
         st.info("No recorded workflows yet. Run an agent request or the explicitly labeled local demo.")
@@ -221,8 +221,8 @@ elif view == "MCP":
             show_error(exc)
 
 else:
-    st.subheader("Explain the project")
+    st.subheader("Understand the workflow")
     st.write("The LLM chooses actions. The SDK validates and executes tool requests, adds results to history, and calls the model again. Python retrieves evidence, calculates metrics, and saves state.")
-    st.markdown("Read **docs/INTERVIEW_GUIDE.md** for the demo script, file map, limitations, and practice questions.")
+    st.markdown("Read **docs/WORKFLOW_GUIDE.md** for the execution flow, file map, and implementation notes.")
     st.code("app.py / cli.py → agent.py → SDK runner → tools.py → retrieval / analytics / MCP → tool result → model → report")
     st.caption("Implemented: tool calling, hybrid RAG, pandas analytics, SQLite state, MCP primitives, Markdown procedures, SDK hooks, and these diagrams. Not implemented: subagents, plugin packaging, automatic memory, publishing, or automatic resume.")

@@ -2,9 +2,9 @@
 
 ## Agent Workflow Visualizer
 
-Status: required for the final project; implementation deferred to the dashboard phase. Do not implement the visualizer before that phase.
+Status: implemented in the dashboard phase; see PROJECT_PROGRESS.md for verification status.
 
-Purpose: provide a professional, meeting-ready explanation of the AI agent's architecture and demonstrate how real marketing workflows execute. The visualizer must be understandable to nontechnical audiences and suitable for screen sharing.
+Purpose: inspect the AI agent's architecture and actual marketing workflow execution locally, with clear connections and recorded events.
 
 ### Architecture View
 
@@ -20,10 +20,10 @@ Purpose: provide a professional, meeting-ready explanation of the AI agent's arc
 - Show tool inputs, outputs, and execution durations when available.
 - Allow users to inspect individual execution steps.
 
-### Presentation
+### Inspection interface
 
 - Use a clean, professional visual design with clear labels.
-- Include a presentation-friendly view.
+- Include a focus view with more room for inspecting diagrams.
 - Support diagram export if feasible within the project time budget.
 - Prioritize a working diagram over advanced animations or complex frontend libraries.
 
@@ -33,8 +33,3 @@ Purpose: provide a professional, meeting-ready explanation of the AI agent's arc
 - During the tool-calling implementation phase, begin collecting structured execution logs so the dashboard visualizer can reuse them later.
 - Execution records should associate steps with a workflow run and preserve their order, tool name, status, inputs, outputs, and available timing information. Record failures as actual execution events as well.
 - Integrate both visualization modes during the dashboard phase, using the implemented architecture and captured execution logs.
-- Do not implement the visualizer now; retain this requirement until the relevant phase.
-
-### Time budget and priority
-
-The entire project must remain within approximately five hours. The visualizer is an important final-project deliverable. Simplify less important UI features as needed to prioritize a working architecture diagram and inspectable execution view; keep export and presentation enhancements lightweight.

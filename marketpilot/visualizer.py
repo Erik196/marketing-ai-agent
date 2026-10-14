@@ -11,17 +11,17 @@ TOOL_LABELS = {"research_market": "Market research", "generate_content": "Market
                "mcp.mcp_keyword_knowledge": "Knowledge retrieval through MCP"}
 
 
-def new_diagram(name: str, presentation: bool = False) -> Digraph:
+def new_diagram(name: str, focus_mode: bool = False) -> Digraph:
     graph = Digraph(name)
     graph.attr(rankdir="LR", bgcolor="transparent", pad="0.25", nodesep="0.45", ranksep="0.65")
     graph.attr("node", shape="box", style="rounded,filled", fillcolor="#E8EEF8", color="#A6B4CC",
-               fontname="Arial", fontsize="17" if presentation else "13", margin="0.18,0.12")
+               fontname="Arial", fontsize="17" if focus_mode else "13", margin="0.18,0.12")
     graph.attr("edge", color="#64748B", fontname="Arial", fontsize="11", arrowsize="0.8")
     return graph
 
 
-def architecture_diagram(record: dict | None = None, presentation: bool = False) -> Digraph:
-    graph = new_diagram("MarketPilot architecture", presentation)
+def architecture_diagram(record: dict | None = None, focus_mode: bool = False) -> Digraph:
+    graph = new_diagram("MarketPilot architecture", focus_mode)
     configuration = (record or {}).get("configuration") or {}
     offline = configuration.get("mode") == "offline_local_demo"
     names = {step["tool"] for step in (record or {}).get("steps", [])}
@@ -80,9 +80,9 @@ def architecture_diagram(record: dict | None = None, presentation: bool = False)
     return graph
 
 
-def execution_diagram(record: dict, presentation: bool = False) -> Digraph:
+def execution_diagram(record: dict, focus_mode: bool = False) -> Digraph:
     """Only add steps that exist in the record; never infer a plan from the prompt."""
-    graph = new_diagram("MarketPilot execution", presentation)
+    graph = new_diagram("MarketPilot execution", focus_mode)
     graph.node("start", "Request received", fillcolor="#E8EEF8")
     previous = "start"
     for index, step in enumerate(record.get("steps", [])):
