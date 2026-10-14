@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from marketpilot.execution import ExecutionLog
 from marketpilot.retrieval import retrieve_knowledge
+from marketpilot.analytics import analyze_csv
 
 
 class DraftItem(BaseModel):
@@ -167,4 +168,33 @@ async def search_knowledge(context: RunContextWrapper[ExecutionLog], query: str,
     )
 
 
-MARKETING_TOOLS = [research_market, generate_content, create_social_posts, draft_email, search_knowledge]
+@function_tool(failure_error_function=None)
+async def analyze_campaign(context: RunContextWrapper[ExecutionLog], filename: str) -> dict:
+    """Calculate campaign totals and channel metrics from a local CSV using pandas.
+
+    Args:
+        filename: CSV filename inside data/campaigns/, such as sample_campaign.csv.
+    """
+    async def operation() -> dict:
+        return analyze_csv(filename)
+
+    return await context.context.execute("analyze_campaign", {"filename": filename}, operation)
+
+
+@function_tool(failure_error_function=None)
+async def read_saved_report(context: RunContextWrapper[ExecutionLog], run_id: str) -> dict:
+    """Retrieve a specific earlier workflow's saved report from SQLite when the user provides its run ID.
+
+    Args:
+        run_id: The exact ID of a previously saved workflow run.
+    """
+    async def operation() -> dict:
+        if context.context.store is None:
+            raise ValueError("SQLite workflow storage is not configured for this run.")
+        return context.context.store.read_report(run_id)
+
+    return await context.context.execute("read_saved_report", {"run_id": run_id}, operation)
+
+
+MARKETING_TOOLS = [research_market, generate_content, create_social_posts, draft_email,
+                   search_knowledge, analyze_campaign, read_saved_report]

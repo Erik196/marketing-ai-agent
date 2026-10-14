@@ -13,6 +13,11 @@ htmlcov/
 .env.*
 !.env.example
 data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/campaigns/**/*.csv
+!data/campaigns/sample_campaign.csv
 data/*.sqlite*
 data/runs/
 data/knowledge_index.json

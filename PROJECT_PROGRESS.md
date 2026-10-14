@@ -110,9 +110,50 @@ and can return irrelevant passages. Demo audience notes are hypotheses, not rese
 Semantic/hybrid search needs an up-to-date index and paid query embeddings.
 Conversation memory, SQL retrieval, and a dashboard are still unimplemented.
 
+## Phase 4 — Workflows and Analytics
+
+Status: implemented and offline validated. Deterministic sample analytics and
+SQLite persistence are verified; live LLM orchestration and report generation
+remain pending the user's API-enabled terminal. Keep all changes local until
+the user explicitly authorizes a commit/push.
+
+- Added pandas CSV analysis with schema/value validation and aggregate/channel
+  CTR, conversion rate, CPC, CPA, and optional ROAS. Null represents undefined metrics.
+- Added a fictional sample CSV: 25,000 impressions, 1,400 clicks, 85 conversions,
+  EUR 600 spend, and EUR 1,700 revenue. Computed CTR is 5.6% and CPA EUR 7.0588.
+- Added analyze_campaign and read_saved_report tools; seven tools now share the
+  existing sequential SDK loop with an eight-turn limit.
+- Added optional CampaignReport output schema through --campaign and Markdown
+  rendering. Stored reports retain both the structured fields and displayed text.
+- Added SQLite runs/tool_steps tables, saving actual execution transitions and
+  explicit report retrieval with fixed parameterized queries. This is saved state,
+  not automatic memory, model-generated SQL, or resumable execution.
+- Added workflow_cli analyze/list/show commands that require no API key.
+- Added pandas 3.0.6 to pyproject.toml and generated requirements.txt with pip
+  freeze --exclude marketpilot-ai, omitting machine-specific editable paths.
+- No files deleted, no commits/pushes, and no Phase 5–7 functionality implemented.
+
+Validation:
+- `python -m pytest -q`: 46 passed, including 18 Phase 4 cases.
+- Real local sample CSV analysis matches expected weighted totals and channel rates.
+- Tests cover invalid/missing numeric data, whole counts, currency consistency,
+  duplicate columns, restricted paths, zero denominators, and unavailable revenue.
+- SQLite tests verify running/completed/failed snapshots, reopened databases,
+  key redaction, ordered steps, saved reports, and parameterized ID queries.
+- A real SDK integration test runs local retrieval -> analytics -> mocked email
+  drafting -> a structured report using a scripted test model, then reopens SQLite
+  and checks results. This does not claim live LLM planning has been verified.
+- CLI help works; dependency checks report no broken requirements.
+- OPENAI_API_KEY remains unavailable to Codex's shell; no live Phase 4 API run claimed.
+
+Limits: simple CSV schema assumes conversions <= clicks <= impressions and one
+currency. Maximum file size is 5 MB and 10,000 rows. Observational metrics do not
+establish causality or significance. Structured output validates shape, not facts.
+JSON and SQLite writes are separate; forced termination may leave running state.
+No automatic resume, sessions, MCP, dashboard, or visualizer has been implemented.
+
 ## Remaining phases — not implemented
 
-4. Workflows and analytics: multi-step execution, pandas, SQLite state.
 5. MCP and customization: real MCP demo, rules, skills, optional hooks/subagents.
 6. Dashboard: Streamlit and required architecture/execution visualizer; export if feasible.
 7. Testing and demo: end-to-end verification and presentation documentation.

@@ -7,7 +7,7 @@ name = "marketpilot-ai"
 version = "0.1.0"
 description = "A phase-by-phase AI marketing agent learning project"
 requires-python = ">=3.11"
-dependencies = ["openai-agents==0.23.1"]
+dependencies = ["openai-agents==0.23.1", "pandas==3.0.6"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]

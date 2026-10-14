@@ -159,7 +159,8 @@ def test_real_sdk_agent_tool_agent_loop(tmp_path, monkeypatch):
 def test_agent_run_failure_is_saved(tmp_path, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "offline-placeholder")
     real_log = ExecutionLog
-    monkeypatch.setattr(agent, "ExecutionLog", lambda *args: real_log(*args, directory=tmp_path))
+    monkeypatch.setattr(agent, "WorkflowStore", lambda: None)
+    monkeypatch.setattr(agent, "ExecutionLog", lambda *args, **kwargs: real_log(*args, directory=tmp_path, **kwargs))
     monkeypatch.setattr(agent.Runner, "run", AsyncMock(side_effect=RuntimeError("test failure")))
     with pytest.raises(RuntimeError):
         asyncio.run(agent.run_marketing_agent("test"))

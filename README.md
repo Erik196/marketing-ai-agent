@@ -11,9 +11,11 @@ results, and produces marketing drafts or answers grounded in retrieved evidence
   using keyword, semantic, or hybrid search.
 - Combine retrieval/research and drafting in one request, with actual tool progress
   and inspectable JSON execution logs.
+- Calculate campaign CSV metrics with pandas, produce structured campaign reports,
+  and save workflow state and results in SQLite for later inspection.
 
-**Current scope:** phases 1–3 are implemented. Email and social content are draft-only.
-There is no CSV analytics, conversation memory, MCP, dashboard, or workflow
+**Current scope:** phases 1–4 are implemented. Email and social content are draft-only.
+There is no automatic conversation memory, MCP, dashboard, or workflow
 visualizer yet. The sample knowledge describes **StudySprint, a fictional demo
 product**. Research and retrieval results still need source review.
 
@@ -34,6 +36,18 @@ export OPENAI_API_KEY
 The application reads your shell's environment; it does not load `.env` files or
 use your Codex login. Model, research, and embedding requests use API credits.
 
+`pyproject.toml` declares direct dependencies. `requirements.txt` freezes the
+installed Python 3.12 environment, including test and transitive dependencies:
+
+```sh
+python -m pip install -r requirements.txt
+python -m pip install -e '.[dev]'
+```
+
+To refresh that snapshot after installing dependencies, use
+`python -m pip freeze --exclude marketpilot-ai > requirements.txt`.
+The exclusion avoids recording a machine-specific editable project path.
+
 ## Run and example prompts
 
 Put any request in quotes:
@@ -50,6 +64,8 @@ python -m marketpilot "Draft three headlines for a productivity app targeting un
 | Email | Draft a friendly promotional email for a student productivity app. Use placeholders for unknown offers. |
 | Local knowledge | Use search_knowledge in keyword mode to list StudySprint's supported features. Cite sources and label it fictional. |
 | Combined request | Research competitors, create a 3-day Instagram calendar, and draft a promotional email for a student productivity app. |
+| Analytics | Analyze sample_campaign.csv and compare channels by cost per conversion. Label the results as fictional demo data. |
+| Saved report | Read the saved report for run RUN_ID and explain its recommendations. |
 
 The model chooses tools based on the request; these are examples, not fixed
 commands. Each invocation starts independently. `--model` overrides
@@ -58,6 +74,24 @@ messages without disabling tools or logs. Use `python -m marketpilot --help` for
 
 Tool status and the log path appear in the terminal. Open `data/runs/<run-id>.json`
 to inspect tool inputs, outputs, statuses, and durations. Generated logs are excluded from Git.
+
+Use `--campaign` for a structured report, rendered as Markdown in the terminal:
+
+```sh
+python -m marketpilot --campaign "Use StudySprint knowledge in keyword mode, analyze sample_campaign.csv, and draft an improved promotional email. Cite sources, name the metric behind recommendations, and label all demo data as fictional."
+```
+
+Inspect analytics or saved runs without an API call:
+
+```sh
+python -m marketpilot.workflow_cli analyze sample_campaign.csv
+python -m marketpilot.workflow_cli list
+python -m marketpilot.workflow_cli show RUN_ID
+```
+
+Replace `RUN_ID` with an ID from `list` or the printed JSON log filename.
+`analyze` prints metrics only; it does not create an agent run. Agent runs save
+status, tool steps, final Markdown, and any structured report to `data/workflows.db`.
 
 ## Knowledge search
 
@@ -86,9 +120,10 @@ python -m pytest -q
 python -m pip check
 ```
 
-All 28 offline tests passed. Tests use mocked API/model responses and do not spend
+All 46 offline tests passed. Tests use mocked API/model responses and do not spend
 credits. Phase 1 has a verified live response; Phase 2 live tool calls and Phase 3
-live embeddings/RAG still need verification from an API-enabled terminal.
+live embeddings/RAG, and Phase 4 live agent workflows still need verification
+from an API-enabled terminal. Local analytics and SQLite persistence are verified.
 See [PROJECT_PROGRESS.md](PROJECT_PROGRESS.md) for status and
 [REQUIREMENTS.md](REQUIREMENTS.md) for the planned visualizer.
 
@@ -281,7 +316,7 @@ includes its metadata so fictional examples remain distinguishable from real dat
 No Phase 3 changes are needed in `execution.py`, `cli.py`, or `__main__.py`: the
 existing tool logger and main runner already support another function tool.
 The existing tool-registration test was updated to expect the fifth tool.
-No files were deleted or dependencies added. No Phase 4–7 code was implemented.
+No files were deleted or dependencies added in Phase 3. Phases 5–7 remain unimplemented.
 
 #### File flow
 
@@ -313,5 +348,129 @@ flowchart TD
     Agent -->|finish run log| Runs
     Agent -->|answer| CLI
     Tests["tests/test_phase3.py"] -.->|verify| Retrieve
+    Tests -.->|verify| SDK
+```
+
+### Phase 4 — Workflows and Analytics
+
+- Added deterministic pandas CSV analytics as the `analyze_campaign` tool.
+- Added optional `--campaign` reports using the SDK's Pydantic `output_type`.
+  Ordinary requests retain their existing plain-text output.
+- Added SQLite run/step persistence and explicit report retrieval through
+  `read_saved_report`. There are now seven function tools; the main runner still
+  has an eight-turn limit and chooses the tools needed for each request.
+- Added offline analysis and run-inspection commands through `workflow_cli.py`.
+- Added a clearly fictional sample CSV, pandas, and a frozen `requirements.txt`.
+- Passed 46 tests, including a multi-step SDK workflow with real retrieval,
+  pandas calculations, and SQLite persistence. Model planning and drafting in
+  that test are explicitly scripted/mocked; live agent verification is pending.
+
+#### CSV format and calculations
+
+Put CSVs inside `data/campaigns/` and pass their filename, e.g. `sample_campaign.csv`.
+The tool accepts only local CSVs within that directory, up to 5 MB and 10,000 rows.
+User CSV files are ignored by Git; the fictional sample is included.
+
+| Column | Requirement |
+| --- | --- |
+| `channel` | Nonempty channel name; multiple rows for a channel are summed. |
+| `impressions`, `clicks`, `conversions` | Finite, nonnegative whole-number counts. This simple schema requires conversions <= clicks <= impressions. |
+| `spend` | Finite, nonnegative numeric spend. |
+| `revenue` | Optional; if absent, ROAS is unavailable. |
+| `currency` | Optional; if supplied, every row must use the same nonempty currency. |
+
+CTR = clicks / impressions × 100; conversion rate = conversions / clicks × 100;
+CPC = spend / clicks; CPA = spend / conversions; ROAS = revenue / spend.
+Zero denominators produce `null`, not zero or infinity. Counts and amounts are
+summed before calculating rates; row percentages are never averaged.
+
+The fictional sample has 25,000 impressions, 1,400 clicks, 85 conversions,
+EUR 600 spend, and EUR 1,700 revenue. Its total CTR is 5.6% and CPA is EUR 7.0588.
+These are demonstration numbers, not evidence of actual marketing performance.
+Python computes metrics; the model interprets them. Recommendations must identify
+their chosen metric and acknowledge observational-data limitations.
+
+#### Workflow state versus conversation memory
+
+`ExecutionLog.save()` still writes JSON and now mirrors each snapshot into SQLite
+when a store is supplied. `runs` holds overall status and final results;
+`tool_steps` holds ordered tool inputs, outputs, failures, and timing.
+Each SQL snapshot is transactional; JSON and SQLite are separate writes, not a
+single cross-file transaction. A forced process termination can leave a run marked
+running; automatic recovery/resume is not implemented.
+
+Stored reports are not automatically added to new prompts. Users can inspect them
+with the workflow CLI or supply a run ID so the agent calls `read_saved_report`.
+This demonstrates real SQL/structured-data retrieval using fixed parameterized
+queries, not model-generated SQL. An eight-turn agent loop is bounded orchestration,
+not a resumable task scheduler.
+
+`CampaignReport` defines title, summary, knowledge, research, analytics, drafts,
+recommendations, and limitations. The SDK parses that schema; Python renders
+Markdown and stores both representations. Schema validation guarantees structure,
+not factual accuracy or that requested tools were used; inspect the actual steps.
+
+#### Phase 4 files and reading order
+
+1. `data/campaigns/sample_campaign.csv`: see the input numbers.
+2. `marketpilot/analytics.py`: follow loading, validation, grouping, and calculation.
+3. `marketpilot/reports.py`: see the final report schema and Markdown rendering.
+4. `marketpilot/storage.py`: see how runs and steps are saved and queried.
+5. `marketpilot/execution.py`: inspect the optional store and SQLite call in `save()`.
+6. `marketpilot/tools.py`: read `analyze_campaign()` and `read_saved_report()`.
+7. `marketpilot/agent.py` and `cli.py`: trace store creation and the `--campaign` flag.
+8. `marketpilot/workflow_cli.py`: inspect local analytics and saved runs without an LLM.
+9. `tests/test_phase4.py`, this README, and `PROJECT_PROGRESS.md`: review verification and limits.
+
+| Function/class | Responsibility |
+| --- | --- |
+| `resolve_csv()` | Restrict filenames to local campaign CSVs and check file size. |
+| `load_campaign()` | Load pandas data and validate schema, counts, values, and currency. |
+| `safe_ratio()` | Handle division by zero explicitly. |
+| `calculate_metrics()` | Compute rates, costs, and ROAS from aggregated values. |
+| `analyze_csv()` | Sum overall/channel values and return metrics, definitions, and warnings. |
+| `CampaignDraft`, `CampaignReport` | Define the optional structured final response. |
+| `CampaignReport.to_markdown()` | Render a validated report for terminal display. |
+| `WorkflowStore.__init__()`, `_connect()` | Create SQLite tables and short-lived connections. |
+| `WorkflowStore.save_run()` | Upsert a run and its steps atomically within SQLite. |
+| `list_runs()`, `get_run()`, `read_report()` | Retrieve recent runs, full run details, or one saved result. |
+| `analyze_campaign()` | Expose and log pandas analytics as an agent tool. |
+| `read_saved_report()` | Expose and log explicit SQLite report retrieval as an agent tool. |
+| `workflow_cli.main()` | Parse analyze/list/show commands without calling the LLM. |
+
+`execution.py` adds an optional store and structured-report field; `agent.py`
+creates the store and enables the report schema only in campaign mode. `cli.py`
+adds the flag and handles SQLite errors. `pyproject.toml` adds pandas, and
+`requirements.txt` captures the installed dependency versions. `.gitignore`
+excludes user campaign data and SQLite sidecar files. Existing tests were adjusted
+to isolate storage in temporary directories. No files were deleted or committed.
+
+```mermaid
+flowchart TD
+    CLI["cli.py · main<br/>optional --campaign"] --> Agent["agent.py · run_marketing_agent"]
+    Agent --> Store["storage.py · WorkflowStore"]
+    Agent --> Log["execution.py · ExecutionLog"]
+    Agent --> SDK["SDK Runner + main LLM"]
+    SDK --> Tools["tools.py<br/>retrieval, analytics, drafting, saved reports"]
+    Tools -->|record actual operation| Log
+    Log -->|analytics operation| Analytics["analytics.py · analyze_csv<br/>load, validate, aggregate, calculate"]
+    CSV["data/campaigns/*.csv"] --> Analytics
+    Log -->|retrieval operation| Retrieval["retrieval.py<br/>local evidence"]
+    Log -->|drafting operation| Draft["tools.py · generate_draft<br/>OpenAI model request"]
+    Log -->|saved-report operation| Store
+    Analytics -->|metrics| Tools
+    Retrieval -->|passages| Tools
+    Draft -->|drafts| Tools
+    Tools -->|tool results| SDK
+    SDK -->|campaign mode final output| Report["reports.py · CampaignReport<br/>to_markdown"]
+    Report --> Agent
+    Log -->|save every transition| Store
+    Store --> DB["data/workflows.db<br/>runs + tool_steps"]
+    Log --> JSON["data/runs/*.json"]
+    Agent -->|display answer| CLI
+    Inspect["workflow_cli.py · main"] -->|analyze| Analytics
+    Inspect -->|list / show| Store
+    Tests["tests/test_phase4.py"] -.->|verify| Analytics
+    Tests -.->|verify| Store
     Tests -.->|verify| SDK
 ```

@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import sys
+import sqlite3
 
 from openai import APIConnectionError, APIStatusError, AuthenticationError, RateLimitError
 from agents import AgentsException
@@ -16,12 +17,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("prompt", help="Marketing request in quotes")
     parser.add_argument("--model", help="Override MARKETPILOT_MODEL and the default model")
     parser.add_argument("--quiet-tools", action="store_true", help="Hide status messages; still save execution logs")
+    parser.add_argument("--campaign", action="store_true", help="Return a structured campaign report rendered as Markdown")
     args = parser.parse_args(argv)
 
     try:
         # stderr keeps progress separate from the final answer on stdout.
         notify = None if args.quiet_tools else lambda message: print(message, file=sys.stderr, flush=True)
-        output = asyncio.run(run_marketing_agent(args.prompt, args.model, notify=notify))
+        output = asyncio.run(run_marketing_agent(args.prompt, args.model, notify=notify, campaign=args.campaign))
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -43,6 +45,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     except OSError:
         print("Could not save the execution log. Check write access to data/runs.", file=sys.stderr)
+        return 1
+    except sqlite3.Error:
+        print("Could not save workflow state in SQLite. Check data/workflows.db and write access.", file=sys.stderr)
         return 1
     except KeyboardInterrupt:
         print("Request interrupted.", file=sys.stderr)
