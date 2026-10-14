@@ -36,9 +36,6 @@ read -rs 'OPENAI_API_KEY?OpenAI API key: '
 export OPENAI_API_KEY
 ```
 
-The application reads your shell's environment; it does not load `.env` files or
-use your Codex login. Model, research, and embedding requests use API credits.
-
 `pyproject.toml` declares direct dependencies. `requirements.txt` freezes the
 installed Python 3.12 environment, including test and transitive dependencies:
 
